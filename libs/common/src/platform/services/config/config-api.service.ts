@@ -15,25 +15,32 @@ export class ConfigApiService implements ConfigApiServiceAbstraction {
     // We don't particularly care about ensuring the token is valid and not expired, just that it exists
 
     // Cozy customization, mock ConfigApi server response
-    // cozy-stack does not implement /api/config route
-    // Everything is fake but "looks good"
-    // These route is used mainly to get server configuration and feature flags
+    // cozy-stack will implement /api/config route in the next version but we add a catch
+    // during the transition and for self hosted users with old version of the stack
     //*
-    return new ServerConfigResponse({
-      Version: "2020.0.0", // Arbitrary, must be lower than 2024.2.0, the only check by checkServerMeetsVersionRequirement
-      GitHash: "c670da43",
-      Server: null,
-      Environment: {
-        CloudRegion: "EU",
-        Vault: "https://cozy.io",
-        Api: "https://cozy.io",
-        Identity: "https://cozy.io",
-        Notifications: "https://cozy.io",
-        Sso: "https://cozy.io",
-      },
-      FeatureStates: {},
-      object: "config",
-    });
+    const authed: boolean =
+      userId == null ? false : (await this.tokenService.getAccessToken(userId)) != null;
+
+    try {
+      const r = await this.apiService.send("GET", "/config", null, authed, true);
+      return new ServerConfigResponse(r);
+    } catch {
+      return new ServerConfigResponse({
+        Version: "2020.0.0", // Arbitrary, must be lower than 2024.2.0, the only check by checkServerMeetsVersionRequirement
+        GitHash: "c670da43",
+        Server: null,
+        Environment: {
+          CloudRegion: "EU",
+          Vault: "https://cozy.io",
+          Api: "https://cozy.io",
+          Identity: "https://cozy.io",
+          Notifications: "https://cozy.io",
+          Sso: "https://cozy.io",
+        },
+        FeatureStates: {},
+        object: "config",
+      });
+    }
     /*/
     const authed: boolean =
       userId == null ? false : (await this.tokenService.getAccessToken(userId)) != null;
